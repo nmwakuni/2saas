@@ -19,6 +19,7 @@ model User {
   updatedAt     DateTime   @updatedAt
 
   properties    Property[]
+  expenses      Expense[]
 }
 
 // Property (Building/House)
@@ -34,6 +35,7 @@ model Property {
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   units         Unit[]
+  expenses      Expense[]
 }
 
 // Unit (Individual Apartment/Room)
@@ -50,6 +52,7 @@ model Unit {
 
   tenants       Tenant[]
   payments      Payment[]
+  expenses      Expense[]
 
   @@unique([propertyId, unitNumber])
 }
@@ -108,4 +111,28 @@ model Reminder {
 
   tenantId      String
   tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+// Expense (Maintenance, Utilities, etc.)
+model Expense {
+  id            String   @id @default(cuid())
+  description   String
+  amount        Decimal  @db.Decimal(10, 2)
+  category      String   // "maintenance", "utilities", "repairs", "insurance", "taxes", "other"
+  expenseDate   DateTime @default(now())
+  vendor        String?  // Who was paid (plumber, electrician, etc.)
+  receiptUrl    String?  // URL to receipt/invoice
+  status        String   @default("paid") // "paid", "pending"
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  propertyId    String?
+  property      Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+
+  unitId        String?
+  unit          Unit?     @relation(fields: [unitId], references: [id], onDelete: SetNull)
+
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

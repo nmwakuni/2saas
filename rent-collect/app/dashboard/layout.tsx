@@ -47,6 +47,20 @@ export default function DashboardLayout({
             <span>Payments</span>
           </Link>
           <Link
+            href="/dashboard/expenses"
+            className="flex items-center gap-3 px-6 py-3 text-white/90 hover:bg-indigo-700 hover:text-white"
+          >
+            <span>💸</span>
+            <span>Expenses</span>
+          </Link>
+          <Link
+            href="/dashboard/analytics"
+            className="flex items-center gap-3 px-6 py-3 text-white/90 hover:bg-indigo-700 hover:text-white"
+          >
+            <span>📈</span>
+            <span>Analytics</span>
+          </Link>
+          <Link
             href="/dashboard/reminders"
             className="flex items-center gap-3 px-6 py-3 text-white/90 hover:bg-indigo-700 hover:text-white"
           >
