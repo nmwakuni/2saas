@@ -1,0 +1,25 @@
+# Dependencies
+node_modules
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Production
+.next
+out
+build
+dist
+
+# Environment
+.env
+.env.local
+.env.production.local
+.env.development.local
+
+# Misc
+.DS_Store
+*.pem
+.vercel
+
+# Prisma
+prisma/migrations
