@@ -1,0 +1,160 @@
+// Prisma schema for Book It - Appointment Scheduling System
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Business Owner / Service Provider
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  name            String
+  phone           String?
+  businessName    String
+  businessType    String   // "salon", "clinic", "consultancy", "spa", etc.
+  description     String?
+  logo            String?  // Logo URL
+  timezone        String   @default("Africa/Nairobi")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  services        Service[]
+  availabilities  Availability[]
+  appointments    Appointment[]
+  notifications   Notification[]
+  settings        Settings?
+}
+
+// Services offered by the business
+model Service {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  duration        Int      // Duration in minutes
+  price           Decimal  @db.Decimal(10, 2)
+  category        String?  // "haircut", "massage", "consultation", etc.
+  isActive        Boolean  @default(true)
+  bufferTime      Int      @default(0) // Buffer time after appointment (minutes)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  appointments    Appointment[]
+}
+
+// Weekly availability schedule
+model Availability {
+  id              String   @id @default(cuid())
+  dayOfWeek       Int      // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  startTime       String   // "09:00"
+  endTime         String   // "17:00"
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dayOfWeek, startTime])
+}
+
+// Customers booking appointments
+model Customer {
+  id              String   @id @default(cuid())
+  name            String
+  email           String
+  phone           String
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  appointments    Appointment[]
+
+  @@unique([email, phone])
+}
+
+// Booked appointments
+model Appointment {
+  id              String   @id @default(cuid())
+  appointmentDate DateTime
+  startTime       String   // "14:00"
+  endTime         String   // "15:00"
+  status          String   @default("pending") // "pending", "confirmed", "cancelled", "completed", "no_show"
+  notes           String?
+  reminderSent    Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  serviceId       String
+  service         Service  @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  customerId      String
+  customer        Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  payments        Payment[]
+  notifications   Notification[]
+
+  @@index([userId, appointmentDate])
+  @@index([customerId])
+}
+
+// Payment records
+model Payment {
+  id              String   @id @default(cuid())
+  amount          Decimal  @db.Decimal(10, 2)
+  paymentMethod   String   // "mpesa", "cash", "card"
+  transactionRef  String?  // M-Pesa transaction code
+  status          String   @default("pending") // "pending", "paid", "refunded"
+  paidAt          DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  appointmentId   String
+  appointment     Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+}
+
+// SMS/Email notification log
+model Notification {
+  id              String   @id @default(cuid())
+  type            String   // "confirmation", "reminder", "cancellation"
+  channel         String   // "sms", "email"
+  recipient       String   // Phone number or email
+  message         String
+  status          String   // "sent", "failed", "pending"
+  sentAt          DateTime @default(now())
+  errorMessage    String?
+
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  appointmentId   String?
+  appointment     Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+}
+
+// Business settings
+model Settings {
+  id                    String   @id @default(cuid())
+  bookingWindowDays     Int      @default(30) // How many days in advance customers can book
+  minNoticeHours        Int      @default(2)  // Minimum hours notice before appointment
+  enableReminders       Boolean  @default(true)
+  reminderHoursBefore   Int      @default(24)
+  enablePayments        Boolean  @default(false)
+  requireDeposit        Boolean  @default(false)
+  depositPercentage     Int      @default(50)
+  currency              String   @default("KES")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
