@@ -1,0 +1,226 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User (Recruiter/Company)
+model User {
+  id            String   @id @default(cuid())
+  clerkId       String   @unique
+  email         String   @unique
+  companyName   String?
+  phone         String?
+  plan          String   @default("free") // "free", "pro", "enterprise"
+  creditsLeft   Int      @default(10) // Free assessments/invites
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  assessments   Assessment[]
+  payments      Payment[]
+  invitations   Invitation[]
+
+  @@index([clerkId])
+}
+
+// Assessment/Test
+model Assessment {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  category    String   // "technical", "aptitude", "personality", "custom"
+  difficulty  String   @default("medium") // "easy", "medium", "hard"
+  duration    Int      // Duration in minutes
+  passingScore Int     @default(70) // Percentage
+  isPublic    Boolean  @default(false) // Can candidates find it publicly
+  status      String   @default("draft") // "draft", "active", "archived"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  questions    Question[]
+  testSessions TestSession[]
+  invitations  Invitation[]
+
+  @@index([userId])
+  @@index([category])
+  @@index([status])
+}
+
+// Question
+model Question {
+  id           String   @id @default(cuid())
+  question     String   @db.Text
+  type         String   // "multiple_choice", "true_false", "short_answer", "coding"
+  points       Int      @default(1)
+  timeLimit    Int?     // Time limit in seconds (optional)
+  explanation  String?  @db.Text
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assessmentId String
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  options      Option[]
+  answers      Answer[]
+
+  @@index([assessmentId])
+}
+
+// Multiple Choice Options
+model Option {
+  id         String   @id @default(cuid())
+  text       String   @db.Text
+  isCorrect  Boolean  @default(false)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+}
+
+// Candidate
+model Candidate {
+  id           String   @id @default(cuid())
+  name         String
+  email        String
+  phone        String
+  location     String?
+  experience   String?  // "entry", "mid", "senior"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  testSessions TestSession[]
+  invitations  Invitation[]
+
+  @@unique([email, phone])
+  @@index([email])
+  @@index([phone])
+}
+
+// Test Session (Candidate taking a test)
+model TestSession {
+  id           String    @id @default(cuid())
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+  timeSpent    Int?      // Time spent in seconds
+  status       String    @default("in_progress") // "in_progress", "completed", "abandoned"
+  score        Float?    // Percentage score
+  passed       Boolean?
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime  @default(now())
+
+  assessmentId String
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  candidateId  String
+  candidate    Candidate  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  answers      Answer[]
+  result       Result?
+
+  @@index([assessmentId])
+  @@index([candidateId])
+  @@index([status])
+}
+
+// Answer (Candidate's answer to a question)
+model Answer {
+  id            String   @id @default(cuid())
+  answerText    String?  @db.Text
+  isCorrect     Boolean?
+  pointsAwarded Int      @default(0)
+  timeSpent     Int?     // Time spent on this question in seconds
+  createdAt     DateTime @default(now())
+
+  testSessionId String
+  testSession   TestSession @relation(fields: [testSessionId], references: [id], onDelete: Cascade)
+
+  questionId    String
+  question      Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([testSessionId])
+  @@index([questionId])
+}
+
+// Result (Detailed test results)
+model Result {
+  id                String   @id @default(cuid())
+  score             Float    // Percentage score
+  totalQuestions    Int
+  correctAnswers    Int
+  wrongAnswers      Int
+  skippedQuestions  Int
+  totalPoints       Int
+  pointsEarned      Int
+  passed            Boolean
+  grade             String?  // "A", "B", "C", etc.
+  feedback          String?  @db.Text
+  certificate       String?  // URL to certificate if passed
+  createdAt         DateTime @default(now())
+
+  testSessionId     String   @unique
+  testSession       TestSession @relation(fields: [testSessionId], references: [id], onDelete: Cascade)
+
+  @@index([passed])
+}
+
+// Invitation (SMS invitation to take test)
+model Invitation {
+  id           String    @id @default(cuid())
+  candidateName String
+  candidateEmail String
+  candidatePhone String
+  message      String?   @db.Text
+  status       String    @default("pending") // "pending", "sent", "failed", "accepted", "completed"
+  sentAt       DateTime?
+  expiresAt    DateTime?
+  accessCode   String?   @unique // Unique code for candidate to access test
+  createdAt    DateTime  @default(now())
+
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  assessmentId String
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  candidateId  String?
+  candidate    Candidate? @relation(fields: [candidateId], references: [id])
+
+  @@index([userId])
+  @@index([assessmentId])
+  @@index([status])
+  @@index([accessCode])
+}
+
+// Payment (For premium features)
+model Payment {
+  id              String   @id @default(cuid())
+  amount          Float
+  currency        String   @default("KES")
+  paymentMethod   String   // "mpesa", "card"
+  transactionRef  String?
+  status          String   @default("pending") // "pending", "completed", "failed"
+  description     String?
+  creditsAdded    Int      @default(0) // Assessment credits purchased
+  planUpgrade     String?  // "pro", "enterprise"
+  createdAt       DateTime @default(now())
+
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+}
