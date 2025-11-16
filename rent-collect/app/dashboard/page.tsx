@@ -9,13 +9,52 @@ export default async function DashboardPage() {
     return null
   }
 
-  // Fetch stats (we'll implement this properly with real data later)
+  // Fetch real stats from database
+  const totalProperties = await prisma.property.count({
+    where: { userId },
+  })
+
+  const totalUnits = await prisma.unit.count({
+    where: {
+      property: { userId },
+    },
+  })
+
+  const occupiedUnits = await prisma.unit.count({
+    where: {
+      property: { userId },
+      status: 'occupied',
+    },
+  })
+
+  // Get this month's revenue
+  const now = new Date()
+  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+
+  const thisMonthPayments = await prisma.payment.findMany({
+    where: {
+      unit: {
+        property: { userId },
+      },
+      paymentDate: {
+        gte: firstDayOfMonth,
+        lte: lastDayOfMonth,
+      },
+      status: 'confirmed',
+    },
+  })
+
+  const monthlyRevenue = thisMonthPayments.reduce(
+    (sum, payment) => sum + parseFloat(payment.amount.toString()),
+    0
+  )
+
   const stats = {
-    totalProperties: 0,
-    totalUnits: 0,
-    occupiedUnits: 0,
-    monthlyRevenue: 0,
-    pendingPayments: 0,
+    totalProperties,
+    totalUnits,
+    occupiedUnits,
+    monthlyRevenue,
   }
 
   const occupancyRate = stats.totalUnits > 0
@@ -111,20 +150,56 @@ export default async function DashboardPage() {
             <span className="text-gray-700">Account created</span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-gray-400">○</span>
-            <span className="text-gray-600">Add your first property</span>
+            {stats.totalProperties > 0 ? (
+              <>
+                <span className="text-green-600">✓</span>
+                <span className="text-gray-700">Add your first property</span>
+              </>
+            ) : (
+              <>
+                <span className="text-gray-400">○</span>
+                <span className="text-gray-600">Add your first property</span>
+              </>
+            )}
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-gray-400">○</span>
-            <span className="text-gray-600">Add units to your property</span>
+            {stats.totalUnits > 0 ? (
+              <>
+                <span className="text-green-600">✓</span>
+                <span className="text-gray-700">Add units to your property</span>
+              </>
+            ) : (
+              <>
+                <span className="text-gray-400">○</span>
+                <span className="text-gray-600">Add units to your property</span>
+              </>
+            )}
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-gray-400">○</span>
-            <span className="text-gray-600">Register tenants</span>
+            {stats.occupiedUnits > 0 ? (
+              <>
+                <span className="text-green-600">✓</span>
+                <span className="text-gray-700">Register tenants</span>
+              </>
+            ) : (
+              <>
+                <span className="text-gray-400">○</span>
+                <span className="text-gray-600">Register tenants</span>
+              </>
+            )}
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-gray-400">○</span>
-            <span className="text-gray-600">Record your first payment</span>
+            {thisMonthPayments.length > 0 ? (
+              <>
+                <span className="text-green-600">✓</span>
+                <span className="text-gray-700">Record your first payment</span>
+              </>
+            ) : (
+              <>
+                <span className="text-gray-400">○</span>
+                <span className="text-gray-600">Record your first payment</span>
+              </>
+            )}
           </div>
         </div>
       </div>
