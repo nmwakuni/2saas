@@ -1,0 +1,111 @@
+// Prisma schema for Rent Collection App
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Landlord/Property Manager Account
+model User {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  name          String
+  phone         String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  properties    Property[]
+}
+
+// Property (Building/House)
+model Property {
+  id            String   @id @default(cuid())
+  name          String
+  address       String
+  type          String   // "apartment", "house", "commercial"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  units         Unit[]
+}
+
+// Unit (Individual Apartment/Room)
+model Unit {
+  id            String   @id @default(cuid())
+  unitNumber    String
+  rentAmount    Decimal  @db.Decimal(10, 2)
+  status        String   @default("vacant") // "occupied", "vacant", "maintenance"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  propertyId    String
+  property      Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  tenants       Tenant[]
+  payments      Payment[]
+
+  @@unique([propertyId, unitNumber])
+}
+
+// Tenant
+model Tenant {
+  id            String   @id @default(cuid())
+  name          String
+  phone         String
+  email         String?
+  idNumber      String?
+  moveInDate    DateTime
+  moveOutDate   DateTime?
+  depositAmount Decimal  @db.Decimal(10, 2)
+  rentDueDay    Int      @default(1) // Day of month rent is due
+  status        String   @default("active") // "active", "moved_out"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  unitId        String
+  unit          Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  payments      Payment[]
+  reminders     Reminder[]
+}
+
+// Payment
+model Payment {
+  id              String   @id @default(cuid())
+  amount          Decimal  @db.Decimal(10, 2)
+  paymentDate     DateTime @default(now())
+  paymentMethod   String   // "mpesa", "cash", "bank"
+  transactionRef  String?  // M-Pesa transaction code
+  month           String   // "2024-01" format
+  status          String   @default("confirmed") // "confirmed", "pending"
+  notes           String?
+  receiptUrl      String?  // URL to generated PDF receipt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  unitId          String
+  unit            Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+}
+
+// SMS Reminder Log
+model Reminder {
+  id            String   @id @default(cuid())
+  type          String   // "rent_due", "late_payment", "receipt"
+  message       String
+  sentAt        DateTime @default(now())
+  status        String   // "sent", "failed"
+  errorMessage  String?
+
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
