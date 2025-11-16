@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -8,9 +10,11 @@ export default function Home() {
             <div className="h-8 w-8 rounded-lg bg-indigo-600"></div>
             <span className="text-xl font-bold text-gray-900">RentCollect</span>
           </div>
-          <button className="rounded-lg bg-indigo-600 px-6 py-2 text-sm font-medium text-white hover:bg-indigo-700">
-            Sign In
-          </button>
+          <Link href="/sign-in">
+            <button className="rounded-lg bg-indigo-600 px-6 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+              Sign In
+            </button>
+          </Link>
         </div>
       </header>
 
@@ -24,9 +28,11 @@ export default function Home() {
             Track tenants, collect rent via M-Pesa, send SMS reminders, and generate receipts automatically.
             No more Excel sheets or missing payments.
           </p>
-          <button className="rounded-lg bg-indigo-600 px-8 py-4 text-lg font-medium text-white hover:bg-indigo-700">
-            Start Free Trial
-          </button>
+          <Link href="/sign-up">
+            <button className="rounded-lg bg-indigo-600 px-8 py-4 text-lg font-medium text-white hover:bg-indigo-700">
+              Start Free Trial
+            </button>
+          </Link>
           <p className="mt-4 text-sm text-gray-500">
             No credit card required • KES 75/unit/month after trial
           </p>
@@ -128,9 +134,11 @@ export default function Home() {
               </li>
             </ul>
             <div className="mt-8 text-center">
-              <button className="rounded-lg bg-indigo-600 px-8 py-4 text-lg font-medium text-white hover:bg-indigo-700">
-                Start 30-Day Free Trial
-              </button>
+              <Link href="/sign-up">
+                <button className="rounded-lg bg-indigo-600 px-8 py-4 text-lg font-medium text-white hover:bg-indigo-700">
+                  Start 30-Day Free Trial
+                </button>
+              </Link>
             </div>
           </div>
         </div>
